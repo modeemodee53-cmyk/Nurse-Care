@@ -1,0 +1,43 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() { return request.auth != null; }
+    function isVerifiedNurse() {
+      return signedIn()
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'nurse'
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.verified == true;
+    }
+    match /users/{uid} {
+      allow read: if signedIn() && request.auth.uid == uid;
+      allow create: if signedIn() && request.auth.uid == uid
+        && request.resource.data.role in ['patient', 'nurse']
+        && request.resource.data.verified == false;
+      allow update, delete: if false;
+    }
+    match /requests/{id} {
+      allow create: if signedIn()
+        && request.resource.data.patientId == request.auth.uid
+        && request.resource.data.status == 'open';
+      allow read: if signedIn() && (
+        resource.data.patientId == request.auth.uid
+        || resource.data.get('nurseId', null) == request.auth.uid
+        || (resource.data.status == 'open' && isVerifiedNurse()));
+      allow update: if signedIn() && (
+        (isVerifiedNurse()
+          && resource.data.status == 'open'
+          && request.resource.data.status == 'accepted'
+          && request.resource.data.nurseId == request.auth.uid
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status','nurseId','nurseName','nursePhone']))
+        || (resource.data.get('nurseId', null) == request.auth.uid
+          && resource.data.status == 'accepted'
+          && request.resource.data.status == 'done'
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status']))
+        || (resource.data.patientId == request.auth.uid
+          && resource.data.status in ['open','accepted']
+          && request.resource.data.status == 'cancelled'
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status']))
+      );
+      allow delete: if false;
+    }
+  }
+}
