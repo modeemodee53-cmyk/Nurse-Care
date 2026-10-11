@@ -53,7 +53,7 @@ footer{color:var(--mute);font-size:.82rem;text-align:center;margin-top:24px}
 <script type="module">
 import {initializeApp} from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
 import {getAuth,onAuthStateChanged,createUserWithEmailAndPassword,signInWithEmailAndPassword,signOut} from "https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";
-import {getFirestore,doc,setDoc,addDoc,updateDoc,collection,query,where,onSnapshot,getDoc} from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
+import {initializeFirestore,doc,setDoc,addDoc,updateDoc,collection,query,where,onSnapshot,getDoc} from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
 
 const app=initializeApp({
   apiKey:"AIzaSyB-dV-31K2W5aE6FoEugd6kAF83BO4v3vI",
@@ -62,7 +62,7 @@ const app=initializeApp({
   storageBucket:"nurse-care-6bba3.firebasestorage.app",
   messagingSenderId:"202337614367",
   appId:"1:202337614367:web:48e202d7fa555db101f32a"});
-const auth=getAuth(app),db=getFirestore(app);
+const auth=getAuth(app),db=initializeFirestore(app,{experimentalForceLongPolling:true});
 
 const T={en:{login:"Log in",signup:"Create account",email:"Email",pass:"Password (6+ characters)",name:"Full name",phone:"Phone number",iam:"I am a",patient:"Patient",nurse:"Nurse",lic:"Nursing license number",logout:"Log out",hi:"Hello",
 req:"Request a home visit",svc:"Service",date:"Date",slot:"Time",area:"Area / district",addr:"Full address",nt:"Notes (optional)",send:"Send request",mine:"My requests",none:"Nothing here yet.",
@@ -213,6 +213,8 @@ document.addEventListener('submit',async ev=>{
     }
   }catch(e){show(fail(e))}finally{btn.disabled=false}
 });
+const reSub=()=>{if(!document.hidden&&U&&(P||isAdm()))listen()};
+document.addEventListener('visibilitychange',reSub);addEventListener('online',reSub);
 render();
 if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
 </script>
