@@ -150,7 +150,7 @@ function card(r,kind){
   if(P.role==='patient'&&(r.status==='open'||r.status==='accepted'))x+=`<button data-a="cx" data-id="${r.id}">${t('cancel')}</button>`;
   return x+'</div></div>'}
 function list(){
-  if(!P)return;const by=a=>[...a].sort((x,y)=>y.created-x.created);
+  if(!P&&!isAdm())return;const by=a=>[...a].sort((x,y)=>y.created-x.created);
   const l1=$('l1'),l2=$('l2'),ad=$('ad'),E=data.err?`<div class="note">${t('e_list')} (${esc(data.err)})</div>`:'';
   if(ad){const rk=n=>n.role==='nurse'&&!n.verified?0:1,a=[...(data.nurses||[])].sort((x,y)=>rk(x)-rk(y)||y.created-x.created);ad.innerHTML=E+(a.length?a.map(nCard).join(''):`<p class="mute">${t('none')}</p>`)}
   if(l1){const a=by(data.mine);l1.innerHTML=E+(a.length?a.map(r=>card(r,'mine')).join(''):`<p class="mute">${t('none')}</p>`)}
