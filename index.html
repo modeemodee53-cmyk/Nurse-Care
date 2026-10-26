@@ -192,7 +192,9 @@ function listen(){
 }
 const opts=o=>Object.entries(o).map(([k,v])=>`<option value="${k}">${esc(v)}</option>`).join('');
 const svcOpts=()=>Object.keys(PRICES).map(k=>`<option value="${k}">${esc(T[L].svcs[k])} - ${pt(k,T[L])}</option>`).join('');
-function authHTML(){const s=mode==='signup';return `
+function authHTML(){
+  const s=mode==='signup';
+  return `
 <div class="card"><div class="tabs"><button data-a="mode" data-m="login" class="${s?'':'on'}">${t('login')}</button><button data-a="mode" data-m="signup" class="${s?'on':''}">${t('signup')}</button></div>
 <form id="fa">
 ${s?`<label>${t('iam')}</label><div class="radio"><label><input type="radio" name="role" value="patient" checked>${t('patient')}</label><label><input type="radio" name="role" value="nurse">${t('nurse')}</label></div>
@@ -201,7 +203,8 @@ ${s?`<label>${t('iam')}</label><div class="radio"><label><input type="radio" nam
 <label for="e">${t('email')}</label><input id="e" type="email" autocomplete="email" required>
 <label for="pw">${t('pass')}</label><input id="pw" type="password" minlength="6" autocomplete="${s?'new-password':'current-password'}" required>
 ${s?agreeBox('agree'):''}<button class="btn" id="sb">${s?t('signup'):t('login')}</button><div class="err" id="er" role="alert"></div>${s?'':`<p style="text-align:center;margin:10px 0 0"><a href="#" data-a="forgot">${t('forgot')}</a></p>`}</form></div>
-<div class="note">${t('free')}</div>`有利}
+<div class="note">${t('free')}</div>`;
+}
 function patientHTML(){const d=new Date().toISOString().slice(0,10);return `
 <h1>${t('hi')} ${esc(P.name)}</h1><div class="note">${t('free')}</div>
 <div id="trip"></div>
@@ -389,198 +392,4 @@ function ovPane(){
 <h2>${t('sDay')}</h2><div class="card"><div class="days">${byDay.map((c,i)=>`<div title="${dd[i]}: ${c}"><i style="height:${Math.round(c*100/mxd)}%"></i></div>`).join('')}</div></div>
 <h2>${t('sSvc')}</h2><div class="card">${bars(svc,k=>T[L].svcs[k]||k)}</div>
 <h2>${t('sArea')}</h2><div class="card">${bars(area,k=>k)}</div>
-<h2>${t('sNur')}</h2><div class="card">${tn.length?tn.map(x=>`<div class="hrow"><span>${esc(x.n)}</span><span>${x.v} ${t('vis')} · ${t('noS')}: ${x.x}</span></div>`).join(''):none()}</div>`}
-const blockPanel=n=>`<div class="note"><label for="bd${n.id}">${t('blkFor')}</label><select id="bd${n.id}"><option value="1">${t('d1')}</option><option value="3">${t('d3')}</option><option value="7">${t('d7')}</option><option value="30">${t('d30')}</option><option value="0">${t('dperm')}</option></select><label for="br${n.id}">${t('blkReason')}</label><input id="br${n.id}"><div class="acts"><button class="bad" data-a="blk" data-id="${n.id}">${t('blkApply')}</button></div></div>`;
-function uCard(n){const o=shown.has(n.id),nu=n.role==='nurse',d=nu?dueOf(n.id):null,bl=blockedNow(n),av=avgOf(n.id),R=data.reqs||[];
-  const vis=R.filter(r=>r.status==='done'&&(r.nurseId===n.id||r.patientId===n.id)).length,cm=(data.cmps||[]).filter(c=>c.fromId===n.id).length;
-  const badges=`<span class="badge ${nu&&!n.verified?'accepted':''}">${nu?(n.verified?t('activeH'):t('pendingH')):t('patient')}</span>${bl?`<span class="badge bad">${n.blockedUntil?t('blkTill')+' '+fmtD(n.blockedUntil):t('blkPerm')}</span>`:''}${n.deleted?`<span class="badge cancelled">${t('deletedL')}</span>`:''}`;
-  return `<div class="card"><div class="row"><b>${esc(n.name)}</b><div>${badges}</div></div>
-<div class="mute">${esc(n.phone)}${n.email?' · '+esc(n.email):''}${nu?` · ${t('licNo')} ${esc(n.license)}`:''} · ${t('nidL')} ${esc(n.nid||'-')}</div>
-<div class="mute">${t('visN')}: ${vis} · ${t('avgR')}: ${av?starsT(av.v)+' ('+av.n+')':t('noRate')} · ${t('cmpN')}: ${cm}${nu&&nsOf(n.id)?` · ${t('noS')}: ${nsOf(n.id)}`:''}${nu&&d.sum?` · ${t('dueL')}: <b>${d.sum} ${t('egp')}</b>`:''}</div>
-${bl&&n.blockReason?`<div class="note">${esc(n.blockReason)}</div>`:''}${o?docsHTML(n.id):''}${shown.has('b'+n.id)?blockPanel(n):''}
-<div class="acts"><button data-a="docs" data-id="${n.id}">${o?t('hideDocs'):t('viewDocs')}</button>${nu?`<button class="p" data-a="ver" data-id="${n.id}" data-v="${n.verified?0:1}">${n.verified?t('deactivate'):t('activate')}</button>`:''}${d&&d.n?`<button data-a="paid" data-id="${n.id}">${t('settle')}</button>`:''}</div>
-<div class="acts">${bl?`<button data-a="unb" data-id="${n.id}">${t('unblockB')}</button>`:`<button class="bad" data-a="bpanel" data-id="${n.id}">${t('blockB')}</button>`}${n.deleted?`<button data-a="undel" data-id="${n.id}">${t('restoreB')}</button>`:''}</div></div>`}
-function usPane(){
-  const F={all:()=>true,pat:u=>u.role==='patient',nur:u=>u.role==='nurse',pend:u=>u.role==='nurse'&&!u.verified&&!u.deleted,blk:u=>blockedNow(u),del:u=>u.deleted},q=asearch.trim().toLowerCase(),rk=u=>u.role==='nurse'&&!u.verified&&!u.deleted?0:1;
-  const a=[...(data.nurses||[])].filter(F[afl]||F.all).filter(u=>!q||[u.name,u.phone,u.email,u.nid,u.id,u.license].some(x=>String(x||'').toLowerCase().includes(q))).sort((x,y)=>rk(x)-rk(y)||y.created-x.created);
-  return `<input id="asr" placeholder="${t('search')}" value="${esc(asearch)}">${chips(['all','pat','nur','pend','blk','del'],afl,'ufl',k=>t('f_'+k))}`+(a.length?a.slice(0,100).map(uCard).join(''):none())}
-function rCard(r){const p=uById(r.patientId),n=uById(r.nurseId),late=r.status==='accepted'&&r.reopenAfter&&Date.now()>r.reopenAfter&&!r.nurseDone;
-  return `<div class="card"><div class="row"><b>${esc(T[L].svcs[r.service]||r.service)}</b><span class="badge ${r.status==='accepted'?'accepted':r.status==='cancelled'?'cancelled':''}">${t(r.status)}</span></div>
-<div class="mute">${esc(r.date)} · ${esc(T[L].slots[r.slot]||r.slot)} · ${esc(r.area)}${r.price?' · '+r.price+' '+t('egp'):''} · ${t('created')} ${fmtD(r.created)}</div>
-<div>${t('patientL')}: ${esc(p.name||'-')}${p.phone?' · '+esc(p.phone):''}</div>${r.nurseId?`<div>${t('nurseL')}: ${esc(n.name||'-')}${n.phone?' · '+esc(n.phone):''}</div>`:''}
-${r.status==='accepted'?`<div class="mute">${t('cN')}: ${r.nurseDone?'✓':'✗'} · ${t('cP')}: ${r.patientDone?'✓':'✗'}${late?' · ⚠ '+t('late'):''}</div>`:''}
-<div class="acts">${r.status==='accepted'&&r.nurseDone&&!r.patientDone?`<button class="p" data-a="afin" data-id="${r.id}">${t('forceB')}</button>`:''}${r.status==='accepted'?`<button data-a="areo" data-id="${r.id}">${t('reopenB')}</button>`:''}${r.status==='open'||r.status==='accepted'?`<button class="bad" data-a="acx" data-id="${r.id}">${t('cancelB')}</button>`:''}</div></div>`}
-function rqPane(){const R=[...(data.reqs||[])].sort((x,y)=>y.created-x.created),a=R.filter(r=>rfl==='all'||r.status===rfl).slice(0,100);
-  return chips(['all','open','accepted','done','cancelled'],rfl,'rfl',k=>`${k==='all'?t('f_all'):t(k)} (${k==='all'?R.length:R.filter(r=>r.status===k).length})`)+(a.length?a.map(rCard).join(''):none())}
-function cCard(c){const u=uById(c.fromId),rq=(data.reqs||[]).find(r=>r.id===c.requestId);
-  return `<div class="card"><div class="row"><b>${esc(t('ct_'+c.type))}</b><span class="badge ${c.status==='open'?'accepted':c.status==='resolved'?'cancelled':''}">${t('cs_'+c.status)}</span></div>
-<div class="mute">${esc(u.name||c.fromName)} (${t(c.fromRole==='nurse'?'nurse':'patient')})${u.phone?' · '+esc(u.phone):''} · ${fmtD(c.created)}</div>
-${rq?`<div class="mute">${t('repVisit')}: ${esc(T[L].svcs[rq.service]||rq.service)} · ${esc(rq.date)} · ${t('patientL')}: ${esc(uById(rq.patientId).name||'-')}${rq.nurseId?` · ${t('nurseL')}: ${esc(uById(rq.nurseId).name||'-')}`:''}</div>`:''}
-<p>${esc(c.text)}</p>
-${c.status==='resolved'?(c.adminReply?`<div class="note">${esc(c.adminReply)}</div>`:''):`<textarea id="cp${c.id}" placeholder="${t('replyPh')}">${esc(c.adminReply||'')}</textarea><div class="acts"><button data-a="crep" data-id="${c.id}">${t('replyB')}</button><button class="p" data-a="cres" data-id="${c.id}">${t('resolveB')}</button></div>`}
-<div class="acts"><button data-a="gou" data-id="${c.fromId}">${t('openUser')}</button>${rq&&(c.fromRole==='nurse'?rq.patientId:rq.nurseId)?`<button data-a="gou" data-id="${c.fromRole==='nurse'?rq.patientId:rq.nurseId}">${t('openOther')}</button>`:''}</div></div>`}
-function cmPane(){const C=[...(data.cmps||[])].sort((x,y)=>y.created-x.created),a=C.filter(c=>cfl==='all'||c.status===cfl);
-  return chips(['all','open','progress','resolved'],cfl,'cfl',k=>`${k==='all'?t('f_all'):t('cs_'+k)} (${k==='all'?C.length:C.filter(c=>c.status===k).length})`)+(a.length?a.map(cCard).join(''):none())}
-function rtPane(){const Rt=[...(data.rats||[])].sort((x,y)=>y.created-x.created),n=Rt.length,avg=n?Rt.reduce((s,x)=>s+x.stars,0)/n:0,by={};
-  Rt.forEach(x=>{(by[x.toId]=by[x.toId]||[]).push(x.stars)});
-  const rows=Object.entries(by).map(e=>({id:e[0],v:e[1].reduce((s,x)=>s+x,0)/e[1].length,n:e[1].length})).sort((x,y)=>x.v-y.v).slice(0,20);
-  return `<div class="kpis">${K(avg?avg.toFixed(1):'-','kAvgR','⭐')}${K(n,'kRatN','🗳️')}${K(Rt.filter(x=>x.stars<=2).length,'kLow','👎')}</div><h2>${t('lowR')}</h2>`+(rows.length?rows.map(x=>`<div class="card"><div class="row"><b>${esc(uById(x.id).name||'-')}</b><span>${starsT(x.v)} ${x.v.toFixed(1)} (${x.n})</span></div><div class="acts"><button data-a="gou" data-id="${x.id}">${t('openUser')}</button></div></div>`).join(''):none())+`<h2>${t('recentR')}</h2>`+(Rt.length?Rt.slice(0,30).map(x=>`<div class="card"><div class="row"><span>${esc(uById(x.fromId).name||'-')} → ${esc(uById(x.toId).name||'-')}</span><b${x.stars<=2?' style="color:var(--bad)"':''}>${starsT(x.stars)}</b></div>${x.comment?`<p class="mute">${esc(x.comment)}</p>`:''}</div>`).join(''):none())}
-function fnPane(){const R=data.reqs||[],dn=R.filter(r=>r.status==='done'),sum=(a,f)=>a.reduce((x,y)=>x+f(y),0),comm=sum(dn,fee),paid=sum(dn.filter(r=>r.feePaid),fee),gross=sum(dn,r=>PRICES[r.service]||0);
-  const nurs=(data.nurses||[]).filter(u=>u.role==='nurse').map(u=>({u,d:dueOf(u.id)})).filter(x=>x.d.n).sort((a,b)=>b.d.sum-a.d.sum);
-  return `<div class="kpis">${K(gross,'kGross','💰')}${K(comm,'kComm','📈')}${K(paid,'kPaid','🏦')}${K(comm-paid,'dueL','⏳')}</div><h2>${t('fnDue')}</h2>`+(nurs.length?nurs.map(x=>`<div class="card"><div class="row"><b>${esc(x.u.name)}</b><b>${x.d.sum} ${t('egp')}</b></div><div class="mute">${x.d.n} ${t('nV')}${x.u.phone?' · '+esc(x.u.phone):''}</div><div class="acts"><button class="p" data-a="paid" data-id="${x.u.id}">${t('settle')}</button></div></div>`).join(''):none())+`<h2>${t('fnRecent')}</h2>`+(dn.length?[...dn].sort((x,y)=>y.created-x.created).slice(0,15).map(r=>`<div class="card"><div class="row"><b>${esc(T[L].svcs[r.service]||r.service)}</b><span class="badge ${r.feePaid?'':'accepted'}">${r.feePaid?t('settled'):t('dueL')}</span></div><div class="mute">${esc(uById(r.nurseId).name||'-')} · ${PRICES[r.service]||0} ${t('egp')} → ${fee(r)} ${t('egp')}</div></div>`).join(''):none())}
-function docsHTML(id){const d=dc[id];if(d===undefined)return `<p class="mute">${t('loading')}</p>`;if(!d)return `<p class="mute">${t('docsMissing')}</p>`;
-  return [['idImg','idCard'],['licImg','license'],['certImg','cert']].filter(x=>d[x[1]]).map(x=>`<b>${t(x[0])}</b><img class="doc" alt="" src="${esc(d[x[1]])}">`).join('')}
-const pendOf=id=>(data.acc||[]).filter(r=>r.nurseId===id&&r.nurseDone).map(r=>r.id);
-const nsOf=id=>(data.re||[]).filter(r=>(r.noShow||[]).includes(id)).length;
-const dueOf=id=>{const a=(data.done||[]).filter(r=>r.nurseId===id&&!r.feePaid);return {n:a.length,sum:a.reduce((x,r)=>x+fee(r),0),ids:a.map(r=>r.id)}};
-const shrink=f=>new Promise((res,rej)=>{const im=new Image(),u=URL.createObjectURL(f);im.onload=()=>{URL.revokeObjectURL(u);const k=Math.min(1,1000/Math.max(im.width,im.height)),w=Math.round(im.width*k),h=Math.round(im.height*k),c=document.createElement('canvas');c.width=w;c.height=h;c.getContext('2d').drawImage(im,0,0,w,h);let q=.7,d=c.toDataURL('image/jpeg',q);while(d.length>250000&&q>.25){q-=.1;d=c.toDataURL('image/jpeg',q)}d.length>250000?rej():res(d)};im.onerror=rej;im.src=u});
-function openLegal(k){const d=LEGAL[L][k];
-  $('lg').innerHTML=`<div class="lgw" role="dialog" aria-modal="true"><button class="sm" data-a="lclose">${t('close')}</button><h1>${esc(d.title)}</h1><p class="mute">${t('upd')}: ${TERMS_V}</p>`+d.s.map((x,i)=>`<h2>${i+1}. ${esc(x[0])}</h2><p>${esc(x[1]).replace(/\{C\}/g,esc(CONTACT)).replace(/\{R\}/g,RATE*100)}</p>`).join('')+`<button class="btn" data-a="lclose">${t('close')}</button></div>`;
-  $('lg').removeAttribute('hidden');$('lg').scrollTop=0;document.body.style.overflow='hidden'}
-function closeLegal(){$('lg').setAttribute('hidden','');document.body.style.overflow=''}
-const agreeBox=id=>`<label class="chk"><input type="checkbox" id="${id}"${id==='agree'?' required':''}><span>${t('agreeTxt')} <a href="#" data-a="legal" data-k="terms">${t('terms')}</a> ${t('and')} <a href="#" data-a="legal" data-k="privacy">${t('privacy')}</a></span></label>`;
-const verifyHTML=()=>`<div class="card"><h2 style="margin-top:0">${t('verTitle')}</h2><p>${t('verMsg')}</p><p class="mute">${esc(U.email)}</p><button class="btn" data-a="vchk">${t('verBtn')}</button><button class="sm" style="margin-top:12px" data-a="vres">${t('verResend')}</button><div class="err" id="er" role="alert"></div></div>`;
-const gateHTML=()=>`<div class="card"><h2 style="margin-top:0">${t('terms')} · ${t('privacy')}</h2><p>${t('gateT')}</p>${agreeBox('agreeG')}<button class="btn" data-a="accept">${t('acceptB')}</button><div class="err" id="er" role="alert"></div></div>`;
-function render(){
-  try{
-    const wr=document.querySelector&&document.querySelector('.w');if(wr)wr.classList.toggle('wide',isAdm());
-    document.documentElement.lang=L;document.documentElement.dir=L==='ar'?'rtl':'ltr';
-    $('hdr').innerHTML=`<button class="sm" data-a="lang">${t('lang')}</button>`+(U?`<button class="sm" data-a="out">${t('logout')}</button>`:'');
-    $('foot').innerHTML=`${t('emerg')}<br><a href="#" data-a="legal" data-k="terms">${t('terms')}</a> · <a href="#" data-a="legal" data-k="privacy">${t('privacy')}</a>`;
-    destroyPick();destroyTrip();
-    const m=$('main');
-    m.innerHTML=!U?authHTML():isAdm()?adminHTML():!P?stuck():P.deleted?delHTML():blockedNow(P)?blkHTML():!U.emailVerified?verifyHTML():P.termsV!==TERMS_V?gateHTML():P.role==='patient'?patientHTML():nurseHTML();
-    if($('pmap'))initPick();
-    if(P&&P.role==='nurse'&&P.verified&&!isAdm())locNow();
-    list();
-  }catch(e){
-    console.error("Render error:", e);
-    const m=$('main');
-    if(m)m.innerHTML=`<div class="card err">حدث خطأ أثناء عرض الصفحة: ${esc(e.message)}</div>`;
-  }
-}
-const fail=e=>{const c=e&&e.code||'';return c.includes('email-already')?t('e_email'):c.includes('invalid-cred')||c.includes('wrong-password')||c.includes('user-not-found')?t('e_cred'):c.includes('weak')?t('e_weak'):c.includes('network')?t('e_net'):t('e_gen')};
-const okNid=x=>/^[23]\d{13}$/.test(x)&&+x.slice(3,5)>=1&&+x.slice(3,5)<=12&&+x.slice(5,7)>=1&&+x.slice(5,7)<=31;
-const show=m=>{const e=$('er');if(e)e.textContent=m};
-document.addEventListener('click',async ev=>{
-  const b=ev.target.closest('[data-a]');if(!b)return;const a=b.dataset.a,id=b.dataset.id;
-  if(b.tagName==='A')ev.preventDefault();
-  try{
-    if(a==='lang'){L=L==='ar'?'en':'ar';try{localStorage.setItem('nc-l',L)}catch(e){}render()}
-    else if(a==='legal')openLegal(b.dataset.k);
-    else if(a==='lclose')closeLegal();
-    else if(a==='accept'){if(!$('agreeG').checked){show(t('e_agree'));return}await updateDoc(doc(db,'users',U.uid),{terms:true,termsV:TERMS_V,termsAt:Date.now()})}
-    else if(a==='vchk'){await U.reload();if(U.emailVerified){await U.getIdToken(true);render()}else show(t('verStill'))}
-    else if(a==='vres'){await sendEmailVerification(U);show(t('verSent'))}
-    else if(a==='reopen'){const q=data.mine.find(x=>x.id===id);if(!q||!confirm(t('reopenQ')))return;await updateDoc(doc(db,'requests',id),{status:'open',nurseId:deleteField(),noShow:arrayUnion(q.nurseId),reopened:true})}
-    else if(a==='forgot'){const em=($('e').value||'').trim();if(!em){show(t('e_fp'));return}await sendPasswordResetEmail(auth,em);$('er').innerHTML=`<span style="color:var(--sea)">${t('fpSent')}</span>`}
-    else if(a==='atab'){atab=b.dataset.k;list()}
-    else if(a==='ufl'){afl=b.dataset.k;list()}
-    else if(a==='rfl'){rfl=b.dataset.k;list()}
-    else if(a==='cfl'){cfl=b.dataset.k;list()}
-    else if(a==='bpanel'){const k='b'+id;shown.has(k)?shown.delete(k):shown.add(k);list()}
-    else if(a==='blk'){const d=+$('bd'+id).value;await updateDoc(doc(db,'users',id),{blocked:true,blockedUntil:d?Date.now()+d*864e5:0,blockReason:($('br'+id).value||'').trim()});shown.delete('b'+id)}
-    else if(a==='unb')await updateDoc(doc(db,'users',id),{blocked:false});
-    else if(a==='undel')await updateDoc(doc(db,'users',id),{deleted:false});
-    else if(a==='afin')await updateDoc(doc(db,'requests',id),{status:'done',patientDone:true});
-    else if(a==='acx')await updateDoc(doc(db,'requests',id),{status:'cancelled'});
-    else if(a==='areo'){const q=(data.reqs||[]).find(x=>x.id===id);if(!q)return;await updateDoc(doc(db,'requests',id),{status:'open',nurseId:deleteField(),noShow:arrayUnion(q.nurseId),reopened:true})}
-    else if(a==='crep'||a==='cres')await updateDoc(doc(db,'complaints',id),{status:a==='cres'?'resolved':'progress',adminReply:($('cp'+id).value||'').trim(),updated:Date.now()});
-    else if(a==='gou'){if(!id)return;const u=uById(id);atab='us';afl='all';asearch=u.phone||u.name||id;list()}
-    else if(a==='rate'){const q=(data.mine||[]).find(x=>x.id===id);if(!q)return;const pr=P.role==='patient';await setDoc(doc(db,'ratings',id+(pr?'_p':'_n')),{requestId:id,fromId:U.uid,toId:pr?q.nurseId:q.patientId,fromRole:P.role,stars:+$('rs'+id).value,comment:($('rc'+id).value||'').trim(),created:Date.now()})}
-    else if(a==='delacc'){if((data.mine||[]).some(x=>x.status==='open'||x.status==='accepted')){alert(t('delBusy'));return}if(P.role==='nurse'&&(data.mine||[]).some(x=>x.status==='done'&&!x.feePaid&&fee(x)>0)){alert(t('delDue'));return}if(!confirm(t('delQ')))return;await updateDoc(doc(db,'users',U.uid),{deleted:true,deletedAt:Date.now()});await signOut(auth)}
-    else if(a==='loc'){const o=$('locs');if(!navigator.geolocation){o.textContent=t('locErr');return}navigator.geolocation.getCurrentPosition(g=>setPin(g.coords.latitude,g.coords.longitude,Math.round(g.coords.accuracy),true),()=>{o.textContent=t('locErr')},{enableHighAccuracy:true,timeout:15000,maximumAge:0})}
-    else if(a==='psearch'){const q=($('ps').value||'').trim(),o=$('locs');if(!q)return;if(!pm){o.textContent=t('mapFail');return}o.textContent=t('searching');const g=await geocode(q);if(Array.isArray(g)){pm.setView(g,16);o.textContent=t('searchHint')}else o.textContent=t(g==='ERR'?'searchErr':'noPlace')}
-    else if(a==='trkon')trkStart(id);
-    else if(a==='trkoff')trkStop();
-    else if(a==='locnow')locNow();
-    else if(a==='out')await signOut(auth);
-    else if(a==='mode'){mode=b.dataset.m;render()}
-    else if(a==='docs'){if(shown.has(id))shown.delete(id);else{shown.add(id);if(!(id in dc))getDoc(doc(db,'nurseDocs',id)).then(s=>{dc[id]=s.exists()?s.data():null;list()}).catch(()=>{dc[id]=null;list()})}list()}
-    else if(a==='ver')await updateDoc(doc(db,'users',id),{verified:b.dataset.v==='1'});
-    else if(a==='paid')await Promise.all(dueOf(id).ids.map(i=>updateDoc(doc(db,'requests',i),{feePaid:true})));
-    else if(a==='acc'){
-      const okL=await new Promise(z=>{if(!navigator.geolocation){z(null);return}navigator.geolocation.getCurrentPosition(g=>z(g.coords),()=>z(null),{enableHighAccuracy:true,timeout:15000,maximumAge:60000})});
-      if(!okL){alert(t('needLoc'));return}
-      const q0=(data.open||[]).find(x=>x.id===id);
-      if(q0&&q0.alat!=null&&etaMin(hav(okL.latitude,okL.longitude,q0.alat,q0.alng))>MAXMIN){alert(t('tooFar').replace(/\{n\}/g,MAXMIN));return}
-      
-      let travelMs = 2 * 3600000;
-      if(q0 && q0.alat != null){
-        const dist = hav(okL.latitude, okL.longitude, q0.alat, q0.alng);
-        const mins = etaMin(dist);
-        travelMs = (mins + 60) * 60000;
-      }
-      const newReopenAfter = Date.now() + travelMs;
-
-      const bt=writeBatch(db);
-      bt.update(doc(db,'requests',id),{
-        status:'accepted',
-        nurseId:U.uid,
-        acceptedAt:Date.now(),
-        acceptLat:+okL.latitude.toFixed(3),
-        acceptLng:+okL.longitude.toFixed(3),
-        reopenAfter: newReopenAfter
-      });
-      bt.set(doc(db,'requests',id,'contact','n'),{nurseId:U.uid,nurseName:P.name,nursePhone:P.phone});
-      await bt.commit();
-      autoT[id]=1;
-      trkStart(id);
-    }
-    else if(a==='done'){if(P.role==='nurse')trkStop(true);const q0=data.mine.find(x=>x.id===id)||{};await updateDoc(doc(db,'requests',id),q0.patientDone?{nurseDone:true,status:'done'}:{nurseDone:true})}
-    else if(a==='pconf'){const q0=data.mine.find(x=>x.id===id)||{};await updateDoc(doc(db,'requests',id),q0.nurseDone?{patientDone:true,status:'done'}:{patientDone:true})}
-    else if(a==='force')await Promise.all(pendOf(id).map(i=>updateDoc(doc(db,'requests',i),{status:'done',patientDone:true})));
-    else if(a==='cx')await updateDoc(doc(db,'requests',id),{status:'cancelled'});
-  }catch(e){alert(t('e_gen'))}
-});
-document.addEventListener('input',e=>{if(e.target.id==='asr'){asearch=e.target.value;list()}});
-document.addEventListener('keydown',e=>{if(e.key==='Escape')closeLegal();if(e.key==='Enter'&&e.target.id==='ps'){e.preventDefault();const b=document.querySelector('[data-a="psearch"]');if(b)b.click()}});
-document.addEventListener('change',e=>{if(e.target.id==='sp'){const w=$('slw');if(w)w.hidden=e.target.value!=='nurse'}
-  if(e.target.name==='role'){const w=$('lw');if(w)w.hidden=e.target.value!=='nurse'}});
-document.addEventListener('submit',async ev=>{
-  ev.preventDefault();const f=ev.target,btn=f.querySelector('.btn'),v=i=>($(i)?.value||'').trim();btn.disabled=true;show('');
-  try{
-    if(f.id==='fa'){
-      if(mode==='login')await signInWithEmailAndPassword(auth,v('e'),v('pw'));
-      else{
-        const role=f.querySelector('[name=role]:checked').value,lic=v('l');
-        const nid=v('nid').replace(/[٠-٩]/g,d=>'٠١٢٣٤٥٦٧٨٩'.indexOf(d));
-        if(!v('n')||!v('p')||(role==='nurse'&&!lic)){show(t('e_req'));return}
-        if(!$('agree').checked){show(t('e_agree'));return}
-        if(!okNid(nid)){show(t('e_nid'));return}
-        const ph=v('p').replace(/[٠-٩]/g,d=>'٠١٢٣٤٥٦٧٨٩'.indexOf(d)).replace(/[\s-]/g,'').replace(/^\+?20/,'0');
-        if(!/^01[0125]\d{8}$/.test(ph)){show(t('e_phone'));return}
-        const f0=$('idc').files[0];if(!f0){show(t('e_idimg'));return}
-        let imgs;
-        try{imgs={idCard:await shrink(f0)};if(role==='nurse'){const x=$('li').files[0],y=$('ci').files[0];if(!x||!y){show(t('e_img'));return}imgs.license=await shrink(x);imgs.cert=await shrink(y)}}catch(z){show(t('e_big'));return}
-        const c=await createUserWithEmailAndPassword(auth,v('e'),v('pw'));
-        sendEmailVerification(c.user).catch(()=>{});
-        await setDoc(doc(db,'users',c.user.uid),{role,name:v('n'),phone:ph,email:v('e'),nid,terms:true,termsV:TERMS_V,termsAt:Date.now(),license:role==='nurse'?lic:'',verified:false,created:Date.now()});
-        await setDoc(doc(db,'nurseDocs',c.user.uid),{...imgs,created:Date.now()});
-      }
-    }else if(f.id==='fr'){
-      if(!v('d')||!v('a')||!v('ad')){show(t('e_req'));return}
-      if(!pin){show(t('e_pin'));return}
-      const sup=v('sp')||'patient',sl=v('sl'),rf=sup==='nurse'?$('rxf').files[0]:null;if(sup==='nurse'&&!sl&&!rf){show(t('e_sup'));return}
-      let rx='';if(rf){try{rx=await shrink(rf)}catch(z){show(t('e_big'));return}}
-      const ends={am:12,pm:17,ev:21},dp=v('d').split('-'),ra=new Date(+dp[0],+dp[1]-1,+dp[2],(ends[v('t')]||21)+2).getTime();
-      const rr=doc(collection(db,'requests')),bt=writeBatch(db);
-      bt.set(rr,{patientId:U.uid,service:v('s'),price:PRICES[v('s')]||0,supplies:sup,supList:sup==='nurse'?sl:'',hasRx:!!rx,date:v('d'),slot:v('t'),area:v('a'),reopenAfter:ra,alat:+pin.lat.toFixed(2),alng:+pin.lng.toFixed(2),status:'open',created:Date.now()});
-      bt.set(doc(rr,'contact','p'),{patientName:P.name,patientPhone:P.phone,address:v('ad'),note:v('nt'),rx,lat:pin.lat,lng:pin.lng,acc:pin.acc});
-      await bt.commit();
-      f.reset();$('slw').hidden=true;clearPin();$('er').innerHTML=`<span style="color:var(--sea)">${t('reqOk')}</span>`;
-    }else if(f.id==='fc'){
-      const e3=$('er3');e3.textContent='';
-      await addDoc(collection(db,'complaints'),{fromId:U.uid,fromName:P.name,fromRole:P.role,requestId:v('cr'),type:v('ct'),text:v('cx'),status:'open',created:Date.now()});
-      f.reset();e3.textContent=t('repOk');
-    }
-  }catch(e){show(fail(e))}finally{btn.disabled=false}
-});
-setInterval(()=>{if(P&&P.role==='nurse'&&P.verified&&!isAdm()&&!document.hidden)locNow()},18e4);
-const reSub=()=>{if(!document.hidden&&U&&(P||isAdm()))listen()};
-document.addEventListener('visibilitychange',reSub);addEventListener('online',reSub);
-render();
-if('serviceWorker' in navigator){const had=!!navigator.serviceWorker.controller;navigator.serviceWorker.addEventListener('controllerchange',()=>{if(had)location.reload()});navigator.serviceWorker.register('sw.js').catch(()=>{})}
-</script>
-</body>
-</html>
+<h2>${t('sNur')}</h2><div class="card">${tn.length?tn.map(x=>`<div class="hrow"><span>${esc(x.n)}</span><span>${x.v} ${t('vis')} · ${t('
