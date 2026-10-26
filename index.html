@@ -61,10 +61,20 @@ footer{color:var(--mute);font-size:.82rem;text-align:center;margin-top:24px}
 <body>
 <div class="w">
 <header><div class="logo"><i>+</i>Nurse Care</div><div id="hdr"></div></header>
-<main id="main"></main>
+<main id="main"><div class="card"><p class="mute">جاري تحميل التطبيق...</p></div></main>
 <footer id="foot"></footer>
 </div>
 <div id="lg" hidden></div>
+<script>
+window.onerror = function(msg, url, line) {
+  const m = document.getElementById('main');
+  if(m) m.innerHTML = `<div class="card" style="color:var(--bad)"><b>خطأ برمجى:</b> ${msg} (سطر ${line})</div>`;
+};
+window.addEventListener('unhandledrejection', event => {
+  const m = document.getElementById('main');
+  if(m) m.innerHTML = `<div class="card" style="color:var(--bad)"><b>خطأ في الاتصال أو الوعد:</b> ${event.reason?.message || event.reason}</div>`;
+});
+</script>
 <script type="module">
 import {initializeApp} from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
 import {getAuth,onAuthStateChanged,createUserWithEmailAndPassword,signInWithEmailAndPassword,signOut,sendEmailVerification,sendPasswordResetEmail} from "https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";
@@ -224,7 +234,7 @@ const tiles=m=>lf().tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{
 async function gj(url,ms){const c=new AbortController(),z=setTimeout(()=>c.abort(),ms||8000);try{const x=await fetch(url,{signal:c.signal});if(!x.ok)throw new Error('http');return await x.json()}finally{clearTimeout(z)}}
 async function geocode(q){const e=encodeURIComponent(q);let bad=0;
   try{const j=await gj('https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=eg&accept-language=ar,en&q='+e);if(j[0])return[+j[0].lat,+j[0].lon]}catch(x){bad++}
-  try{const j=await gj('https://photon.komoot.io/api/?limit=1&bbox=24.7,21.7,36.9,31.7&q='+e);const f=j.features&&j.features[0];if(f)return[f.geometry.coordinates[1],f.geometry.coordinates[0]]}catch(x){bad++}
+  try{const j=await gj('https://photon.komoot.io/api/?limit=1&bbox=24.7,21.7,36.9,31.7&q='+e);const f=j.features&&j.features[0];if(f)return[f.geometry.coordinates[1],f.geometry.coordinates[0]}catch(x){bad++}
   try{const j=await gj('https://geocoding-api.open-meteo.com/v1/search?count=10&language=ar&format=json&name='+e);const f=(j.results||[]).find(y=>y.country_code==='EG');if(f)return[f.latitude,f.longitude]}catch(x){bad++}
   return bad>=3?'ERR':null}
 function destroyPick(){if(pm){pm.remove();pm=null;pmk=null}}
@@ -321,7 +331,7 @@ const blkHTML=()=>`<div class="card"><h2 style="margin-top:0">${t('blockedT')}</
 const delHTML=()=>`<div class="card"><h2 style="margin-top:0">${t('deletedT')}</h2><p class="mute">${t('deletedMsg')} ${esc(CONTACT)}</p></div>`;
 const mcCard=c=>`<div class="card"><div class="row"><b>${esc(t('ct_'+c.type))}</b><span class="badge ${c.status==='open'?'accepted':c.status==='resolved'?'cancelled':''}">${t('cs_'+c.status)}</span></div><p>${esc(c.text)}</p>${c.adminReply?`<div class="note"><b>${t('repReply')}:</b> ${esc(c.adminReply)}</div>`:''}</div>`;
 const accountHTML=()=>{
-  const complaintTypes = P.role === 'nurse' 
+  const complaintTypes = P && P.role === 'nurse' 
     ? ['n_noshow', 'n_cancelled', 'n_badaddr', 'n_behavior', 'n_safety', 'n_payment', 'n_outscope', 'n_app', 'n_other'] 
     : ['p_noshow', 'p_late', 'p_behavior', 'p_service', 'p_safety', 'p_payment', 'p_app', 'p_other'];
   return `<h2>${t('repH')}</h2><form class="card" id="fc"><label for="ct">${t('repType')}</label><select id="ct">${complaintTypes.map(k=>`<option value="${k}">${t('ct_'+k)}</option>`).join('')}</select><label for="cr">${t('repVisit')}</label><select id="cr"><option value="">${t('repNone')}</option></select><label for="cx">${t('repText')}</label><textarea id="cx" required></textarea><button class="btn">${t('repSend')}</button><div class="err" id="er3" role="alert"></div></form><h2>${t('repMine')}</h2><div id="lc"></div><h2>${t('acct')}</h2><div class="card"><div class="mute" id="myr"></div><button class="sm" style="margin:10px 0 0" data-a="delacc">${t('delB')}</button></div>`;
@@ -492,12 +502,11 @@ document.addEventListener('click',async ev=>{
       const q0=(data.open||[]).find(x=>x.id===id);
       if(q0&&q0.alat!=null&&etaMin(hav(okL.latitude,okL.longitude,q0.alat,q0.alng))>MAXMIN){alert(t('tooFar').replace(/\{n\}/g,MAXMIN));return}
       
-      // حساب وقت إعادة الفتح الديناميكي بناءً على المسافة ووقت الوصول المتوقع + ساعة مهلة أمان
       let travelMs = 2 * 3600000;
       if(q0 && q0.alat != null){
         const dist = hav(okL.latitude, okL.longitude, q0.alat, q0.alng);
         const mins = etaMin(dist);
-        travelMs = (mins + 60) * 60000; // وقت الوصول + 60 دقيقة
+        travelMs = (mins + 60) * 60000;
       }
       const newReopenAfter = Date.now() + travelMs;
 
