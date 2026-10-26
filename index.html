@@ -157,7 +157,10 @@ const pt=(k,l)=>PRICES[k]?`${PRICES[k]} ${l.egp}`:l.byCase;
 const showP=r=>r.price?` · ${esc(r.price)} ${t('egp')}`:r.service==='bed'?` · ${t('byCase')}`:'';
 let L=(()=>{try{return localStorage.getItem('nc-l')}catch(e){}})()||((navigator.language||'').startsWith('ar')?'ar':'en');
 const t=k=>T[L]?.[k]??k,$=id=>document.getElementById(id);
-const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => {
+  const map = {'&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;'};
+  return map[c] || c;
+});
 const shown=new Set(),dc={},pc={},nc={};
 let pin=null;
 let nodoc=false,perr='';
@@ -198,7 +201,7 @@ ${s?`<label>${t('iam')}</label><div class="radio"><label><input type="radio" nam
 <label for="e">${t('email')}</label><input id="e" type="email" autocomplete="email" required>
 <label for="pw">${t('pass')}</label><input id="pw" type="password" minlength="6" autocomplete="${s?'new-password':'current-password'}" required>
 ${s?agreeBox('agree'):''}<button class="btn" id="sb">${s?t('signup'):t('login')}</button><div class="err" id="er" role="alert"></div>${s?'':`<p style="text-align:center;margin:10px 0 0"><a href="#" data-a="forgot">${t('forgot')}</a></p>`}</form></div>
-<div class="note">${t('free')}</div>`}
+<div class="note">${t('free')}</div>`有利}
 function patientHTML(){const d=new Date().toISOString().slice(0,10);return `
 <h1>${t('hi')} ${esc(P.name)}</h1><div class="note">${t('free')}</div>
 <div id="trip"></div>
