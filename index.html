@@ -441,7 +441,7 @@ document.addEventListener('click',async ev=>{
     else if(a==='pconf'){const q0=data.mine.find(x=>x.id===id)||{};await updateDoc(doc(db,'requests',id),q0.nurseDone?{patientDone:true,status:'done'}:{patientDone:true})}
     else if(a==='force')await Promise.all(pendOf(id).map(i=>updateDoc(doc(db,'requests',i),{status:'done',patientDone:true})));
     else if(a==='cx')await updateDoc(doc(db,'requests',id),{status:'cancelled'});
-  }catch(e){alert(t('e_gen'))}
+  }catch(e){console.error('Nurse Care action error:',e); alert((e&&e.code)?('Firebase: '+e.code):((e&&e.message)?e.message:t('e_gen')))}
 });
 document.addEventListener('input',e=>{if(e.target.id==='asr'){asearch=e.target.value;list()}});
 document.addEventListener('keydown',e=>{if(e.key==='Escape')closeLegal();if(e.key==='Enter'&&e.target.id==='ps'){e.preventDefault();const b=document.querySelector('[data-a="psearch"]');if(b)b.click()}});
