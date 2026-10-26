@@ -41,7 +41,7 @@ textarea{min-height:64px;resize:vertical}
 .err{color:var(--bad);font-size:.9rem;margin-top:10px;min-height:1.2em}
 .note{background:var(--mint);border-radius:12px;padding:12px;font-size:.92rem}
 .doc{width:100%;border-radius:12px;margin:6px 0 10px;border:1px solid var(--line)}
-#lg{position:fixed;inset:0;z-index:50;background:var(--bg);overflow:auto;padding:env(safe-area-inset-top) 16px env(safe-area-inset-bottom)}#lg[hidden]{display:none}.lgw{max-width:640px;margin:0 auto;padding:14px 0 40px}.lgw p{margin:0 0 6px}.chk{display:flex;gap:10px;align-items:flex-start;font-weight:400;margin-top:14px}.chk input{width:auto;margin-top:5px}.chk a{color:var(--sea)}
+#lg{position:fixed;inset:0;z-index:50;background:var(--bg);overflow:auto;padding:env(safe-area-inset-top) 16px env(safe-area-inset-bottom)}#lg[hidden]:not([hidden]){display:block}#lg[hidden]{display:none}.lgw{max-width:640px;margin:0 auto;padding:14px 0 40px}.lgw p{margin:0 0 6px}.chk{display:flex;gap:10px;align-items:flex-start;font-weight:400;margin-top:14px}.chk input{width:auto;margin-top:5px}.chk a{color:var(--sea)}
 .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(135px,1fr));gap:10px}.kpi{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px}.kpi b{display:block;font-size:1.35rem;color:var(--sea)}.kpi span{font-size:.78rem;color:var(--mute)}
 .hrow{display:flex;justify-content:space-between;gap:8px;font-size:.9rem;margin-top:8px}.hbar{height:8px;background:var(--mint);border-radius:99px;overflow:hidden}.hbar i{display:block;height:100%;background:var(--sea)}
 .days{display:flex;align-items:flex-end;gap:3px;height:70px}.days div{flex:1;height:100%;display:flex;align-items:flex-end;background:var(--mint);border-radius:3px}.days i{display:block;width:100%;background:var(--sea);border-radius:3px}
@@ -146,8 +146,8 @@ const fee=r=>{const p=PRICES[r.service];return p?Math.round(p*RATE):0};
 const pt=(k,l)=>PRICES[k]?`${PRICES[k]} ${l.egp}`:l.byCase;
 const showP=r=>r.price?` · ${esc(r.price)} ${t('egp')}`:r.service==='bed'?` · ${t('byCase')}`:'';
 let L=(()=>{try{return localStorage.getItem('nc-l')}catch(e){}})()||((navigator.language||'').startsWith('ar')?'ar':'en');
-const t=k=>T[L][k]??k,$=id=>document.getElementById(id);
-const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]);
+const t=k=>T[L]?.[k]??k,$=id=>document.getElementById(id);
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const shown=new Set(),dc={},pc={},nc={};
 let pin=null;
 let nodoc=false,perr='';
@@ -299,21 +299,23 @@ function card(r,kind){
   return x+'</div></div>'}
 function setH(el,html){const ae=document.activeElement,id=ae&&ae.id&&el.contains&&el.contains(ae)?ae.id:null,ss=id?ae.selectionStart:0,v={};el.querySelectorAll('input,textarea,select').forEach(i=>{if(i.id)v[i.id]=i.value});el.innerHTML=html;Object.keys(v).forEach(k=>{const i=document.getElementById(k);if(i&&i.type!=='file')i.value=v[k]});if(id){const i=document.getElementById(id);if(i){i.focus();try{i.setSelectionRange(ss,ss)}catch(e){}}}}
 function list(){
-  if(!P&&!isAdm())return;
-  const E=data.err?`<div class="note">${t('e_list')} (${esc(data.err)})</div>`:'';
-  if(isAdm()){const tb=$('atb');if(tb)setH(tb,tabsHTML());const ap=$('apane');if(ap)setH(ap,E+adminPane());return}
-  const by=a=>[...a].sort((x,y)=>y.created-x.created),l1=$('l1'),l2=$('l2');
-  if(trkW){const q=(data.mine||[]).find(x=>x.id===trkW.id);if(!q||q.status!=='accepted'||q.nurseDone)trkStop()}
-  const du=$('due');if(du){const a=(data.mine||[]).filter(r=>r.status==='done'&&!r.feePaid),sum=a.reduce((x,r)=>x+fee(r),0);du.innerHTML=sum?`<div class="note"><b>${t('dueL')}: ${sum} ${t('egp')}</b><br>${esc(PAY_INFO)||t('payDef')}</div>`:''}
-  const cs=$('cr');if(cs){const v=cs.value;cs.innerHTML=`<option value="">${t('repNone')}</option>`+(data.mine||[]).filter(r=>r.status!=='open').map(r=>`<option value="${r.id}">${esc(T[L].svcs[r.service]||r.service)} · ${esc(r.date)}</option>`).join('');cs.value=v}
-  const lc=$('lc');if(lc){const a=by(data.cmp||[]);setH(lc,a.length?a.map(mcCard).join(''):none())}
-  const my=$('myr');if(my){const rv=data.rcv||[];my.textContent=rv.length?`${t('myRate')}: ${starsT(rv.reduce((x,y)=>x+y.stars,0)/rv.length)} (${rv.length})`:t('noRate')}
-  if(l1){const a=by(data.mine||[]);setH(l1,E+(a.length?a.map(r=>card(r,'mine')).join(''):none()))}
-  if(l2){const all=by(data.open||[]).filter(r=>!(r.noShow||[]).includes(U.uid)),me=meNow();
-    if(!me)setH(l2,`<div class="note">${t('needLocList').replace(/\{n\}/g,MAXMIN)} <button class="sm" style="margin:8px 0 0" data-a="locnow">📍 ${t('allowLoc')}</button></div>`);
-    else{const a=all.filter(r=>r.alat==null||etaMin(hav(me.lat,me.lng,r.alat,r.alng))<=MAXMIN),hid=all.length-a.length;
-      setH(l2,(hid?`<p class="mute">${t('hiddenFar').replace('{c}',hid).replace('{n}',MAXMIN)}</p>`:'')+(a.length?a.map(r=>card(r,'open')).join(''):none()))}}
-  tripUpdate();
+  try{
+    if(!P&&!isAdm())return;
+    const E=data.err?`<div class="note">${t('e_list')} (${esc(data.err)})</div>`:'';
+    if(isAdm()){const tb=$('atb');if(tb)setH(tb,tabsHTML());const ap=$('apane');if(ap)setH(ap,E+adminPane());return}
+    const by=a=>[...a].sort((x,y)=>y.created-x.created),l1=$('l1'),l2=$('l2');
+    if(trkW){const q=(data.mine||[]).find(x=>x.id===trkW.id);if(!q||q.status!=='accepted'||q.nurseDone)trkStop()}
+    const du=$('due');if(du){const a=(data.mine||[]).filter(r=>r.status==='done'&&!r.feePaid),sum=a.reduce((x,r)=>x+fee(r),0);du.innerHTML=sum?`<div class="note"><b>${t('dueL')}: ${sum} ${t('egp')}</b><br>${esc(PAY_INFO)||t('payDef')}</div>`:''}
+    const cs=$('cr');if(cs){const v=cs.value;cs.innerHTML=`<option value="">${t('repNone')}</option>`+(data.mine||[]).filter(r=>r.status!=='open').map(r=>`<option value="${r.id}">${esc(T[L].svcs[r.service]||r.service)} · ${esc(r.date)}</option>`).join('');cs.value=v}
+    const lc=$('lc');if(lc){const a=by(data.cmp||[]);setH(lc,a.length?a.map(mcCard).join(''):none())}
+    const my=$('myr');if(my){const rv=data.rcv||[];my.textContent=rv.length?`${t('myRate')}: ${starsT(rv.reduce((x,y)=>x+y.stars,0)/rv.length)} (${rv.length})`:t('noRate')}
+    if(l1){const a=by(data.mine||[]);setH(l1,E+(a.length?a.map(r=>card(r,'mine')).join(''):none()))}
+    if(l2){const all=by(data.open||[]).filter(r=>!(r.noShow||[]).includes(U.uid)),me=meNow();
+      if(!me)setH(l2,`<div class="note">${t('needLocList').replace(/\{n\}/g,MAXMIN)} <button class="sm" style="margin:8px 0 0" data-a="locnow">📍 ${t('allowLoc')}</button></div>`);
+      else{const a=all.filter(r=>r.alat==null||etaMin(hav(me.lat,me.lng,r.alat,r.alng))<=MAXMIN),hid=all.length-a.length;
+        setH(l2,(hid?`<p class="mute">${t('hiddenFar').replace('{c}',hid).replace('{n}',MAXMIN)}</p>`:'')+(a.length?a.map(r=>card(r,'open')).join(''):none()))}}
+    tripUpdate();
+  }catch(e){console.error('list error:',e)}
 }
 const blkHTML=()=>`<div class="card"><h2 style="margin-top:0">${t('blockedT')}</h2><p>${P.blockedUntil?t('blkTill')+' '+fmtD(P.blockedUntil):t('blkPerm')}</p>${P.blockReason?`<div class="note">${esc(P.blockReason)}</div>`:''}<p class="mute">${t('blockedMsg')} ${esc(CONTACT)}</p></div>`;
 const delHTML=()=>`<div class="card"><h2 style="margin-top:0">${t('deletedT')}</h2><p class="mute">${t('deletedMsg')} ${esc(CONTACT)}</p></div>`;
@@ -403,7 +405,7 @@ function cCard(c){const u=uById(c.fromId),rq=(data.reqs||[]).find(r=>r.id===c.re
 ${rq?`<div class="mute">${t('repVisit')}: ${esc(T[L].svcs[rq.service]||rq.service)} · ${esc(rq.date)} · ${t('patientL')}: ${esc(uById(rq.patientId).name||'-')}${rq.nurseId?` · ${t('nurseL')}: ${esc(uById(rq.nurseId).name||'-')}`:''}</div>`:''}
 <p>${esc(c.text)}</p>
 ${c.status==='resolved'?(c.adminReply?`<div class="note">${esc(c.adminReply)}</div>`:''):`<textarea id="cp${c.id}" placeholder="${t('replyPh')}">${esc(c.adminReply||'')}</textarea><div class="acts"><button data-a="crep" data-id="${c.id}">${t('replyB')}</button><button class="p" data-a="cres" data-id="${c.id}">${t('resolveB')}</button></div>`}
-<div class="acts"><button data-a="gou" data-id="${c.fromId}">${t('openUser')}</button>${rq&&(c.fromRole==='nurse'?rq.patientId:rq.nurseId)?`<button data-a="gou" data-id="${c.fromRole==='nurse'?rq.patientId:rq.nurseId}">${t('openOther')}</button>`:''}</div></div>`}
+<div class="acts"><button data-a="gou" data-id="${c.fromId}">${t('openUser')}</button> ${rq&&(c.fromRole==='nurse'?rq.patientId:rq.nurseId)?`<button data-a="gou" data-id="${c.fromRole==='nurse'?rq.patientId:rq.nurseId}">${t('openOther')}</button>`:''}</div></div>`}
 function cmPane(){const C=[...(data.cmps||[])].sort((x,y)=>y.created-x.created),a=C.filter(c=>cfl==='all'||c.status===cfl);
   return chips(['all','open','progress','resolved'],cfl,'cfl',k=>`${k==='all'?t('f_all'):t('cs_'+k)} (${k==='all'?C.length:C.filter(c=>c.status===k).length})`)+(a.length?a.map(cCard).join(''):none())}
 function rtPane(){const Rt=[...(data.rats||[])].sort((x,y)=>y.created-x.created),n=Rt.length,avg=n?Rt.reduce((s,x)=>s+x.stars,0)/n:0,by={};
@@ -421,22 +423,28 @@ const dueOf=id=>{const a=(data.done||[]).filter(r=>r.nurseId===id&&!r.feePaid);r
 const shrink=f=>new Promise((res,rej)=>{const im=new Image(),u=URL.createObjectURL(f);im.onload=()=>{URL.revokeObjectURL(u);const k=Math.min(1,1000/Math.max(im.width,im.height)),w=Math.round(im.width*k),h=Math.round(im.height*k),c=document.createElement('canvas');c.width=w;c.height=h;c.getContext('2d').drawImage(im,0,0,w,h);let q=.7,d=c.toDataURL('image/jpeg',q);while(d.length>250000&&q>.25){q-=.1;d=c.toDataURL('image/jpeg',q)}d.length>250000?rej():res(d)};im.onerror=rej;im.src=u});
 function openLegal(k){const d=LEGAL[L][k];
   $('lg').innerHTML=`<div class="lgw" role="dialog" aria-modal="true"><button class="sm" data-a="lclose">${t('close')}</button><h1>${esc(d.title)}</h1><p class="mute">${t('upd')}: ${TERMS_V}</p>`+d.s.map((x,i)=>`<h2>${i+1}. ${esc(x[0])}</h2><p>${esc(x[1]).replace(/\{C\}/g,esc(CONTACT)).replace(/\{R\}/g,RATE*100)}</p>`).join('')+`<button class="btn" data-a="lclose">${t('close')}</button></div>`;
-  $('lg').hidden=false;$('lg').scrollTop=0;document.body.style.overflow='hidden'}
-function closeLegal(){$('lg').hidden=true;document.body.style.overflow=''}
+  $('lg').removeAttribute('hidden');$('lg').scrollTop=0;document.body.style.overflow='hidden'}
+function closeLegal(){$('lg').setAttribute('hidden','');document.body.style.overflow=''}
 const agreeBox=id=>`<label class="chk"><input type="checkbox" id="${id}"${id==='agree'?' required':''}><span>${t('agreeTxt')} <a href="#" data-a="legal" data-k="terms">${t('terms')}</a> ${t('and')} <a href="#" data-a="legal" data-k="privacy">${t('privacy')}</a></span></label>`;
 const verifyHTML=()=>`<div class="card"><h2 style="margin-top:0">${t('verTitle')}</h2><p>${t('verMsg')}</p><p class="mute">${esc(U.email)}</p><button class="btn" data-a="vchk">${t('verBtn')}</button><button class="sm" style="margin-top:12px" data-a="vres">${t('verResend')}</button><div class="err" id="er" role="alert"></div></div>`;
 const gateHTML=()=>`<div class="card"><h2 style="margin-top:0">${t('terms')} · ${t('privacy')}</h2><p>${t('gateT')}</p>${agreeBox('agreeG')}<button class="btn" data-a="accept">${t('acceptB')}</button><div class="err" id="er" role="alert"></div></div>`;
 function render(){
-  const wr=document.querySelector&&document.querySelector('.w');if(wr)wr.classList.toggle('wide',isAdm());
-  document.documentElement.lang=L;document.documentElement.dir=L==='ar'?'rtl':'ltr';
-  $('hdr').innerHTML=`<button class="sm" data-a="lang">${t('lang')}</button>`+(U?`<button class="sm" data-a="out">${t('logout')}</button>`:'');
-  $('foot').innerHTML=`${t('emerg')}<br><a href="#" data-a="legal" data-k="terms">${t('terms')}</a> · <a href="#" data-a="legal" data-k="privacy">${t('privacy')}</a>`;
-  destroyPick();destroyTrip();
-  const m=$('main');
-  m.innerHTML=!U?authHTML():isAdm()?adminHTML():!P?stuck():P.deleted?delHTML():blockedNow(P)?blkHTML():!U.emailVerified?verifyHTML():P.termsV!==TERMS_V?gateHTML():P.role==='patient'?patientHTML():nurseHTML();
-  if($('pmap'))initPick();
-  if(P&&P.role==='nurse'&&P.verified&&!isAdm())locNow();
-  list();
+  try{
+    const wr=document.querySelector&&document.querySelector('.w');if(wr)wr.classList.toggle('wide',isAdm());
+    document.documentElement.lang=L;document.documentElement.dir=L==='ar'?'rtl':'ltr';
+    $('hdr').innerHTML=`<button class="sm" data-a="lang">${t('lang')}</button>`+(U?`<button class="sm" data-a="out">${t('logout')}</button>`:'');
+    $('foot').innerHTML=`${t('emerg')}<br><a href="#" data-a="legal" data-k="terms">${t('terms')}</a> · <a href="#" data-a="legal" data-k="privacy">${t('privacy')}</a>`;
+    destroyPick();destroyTrip();
+    const m=$('main');
+    m.innerHTML=!U?authHTML():isAdm()?adminHTML():!P?stuck():P.deleted?delHTML():blockedNow(P)?blkHTML():!U.emailVerified?verifyHTML():P.termsV!==TERMS_V?gateHTML():P.role==='patient'?patientHTML():nurseHTML();
+    if($('pmap'))initPick();
+    if(P&&P.role==='nurse'&&P.verified&&!isAdm())locNow();
+    list();
+  }catch(e){
+    console.error("Render error:", e);
+    const m=$('main');
+    if(m)m.innerHTML=`<div class="card err">حدث خطأ أثناء عرض الصفحة: ${esc(e.message)}</div>`;
+  }
 }
 const fail=e=>{const c=e&&e.code||'';return c.includes('email-already')?t('e_email'):c.includes('invalid-cred')||c.includes('wrong-password')||c.includes('user-not-found')?t('e_cred'):c.includes('weak')?t('e_weak'):c.includes('network')?t('e_net'):t('e_gen')};
 const okNid=x=>/^[23]\d{13}$/.test(x)&&+x.slice(3,5)>=1&&+x.slice(3,5)<=12&&+x.slice(5,7)>=1&&+x.slice(5,7)<=31;
