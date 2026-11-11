@@ -1,0 +1,244 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() { return request.auth != null; }
+    function isAdmin() { return signedIn() && request.auth.token.email == 'nursecare590@gmail.com' && request.auth.token.email_verified == true; }
+    function myDoc() { return get(/databases/$(database)/documents/users/$(request.auth.uid)).data; }
+    function userOk() {
+      return exists(/databases/$(database)/documents/users/$(request.auth.uid))
+        && !(myDoc().get('blocked', false) == true
+             && (myDoc().get('blockedUntil', 0) == 0 || myDoc().get('blockedUntil', 0) > request.time.toMillis()))
+        && myDoc().get('deleted', false) == false;
+    }
+    function canAct() { return signedIn() && (isAdmin() || userOk()); }
+    function isVerifiedNurse() {
+      return signedIn() && userOk() && myDoc().role == 'nurse' && myDoc().verified == true;
+    }
+    match /users/{uid} {
+      allow read: if signedIn() && (request.auth.uid == uid || isAdmin());
+      allow create: if signedIn() && request.auth.uid == uid
+        && request.resource.data.role in ['patient', 'nurse']
+        && request.resource.data.verified == false
+        && request.resource.data.nid.matches('[23][0-9]{13}')
+        && request.resource.data.terms == true
+        && request.resource.data.keys().hasOnly(['role','name','phone','email','nid','terms','termsV','termsAt','license','verified','created'])
+        && request.resource.data.name.size() >= 2 && request.resource.data.name.size() <= 100
+        && request.resource.data.phone.matches('01[0125][0-9]{8}')
+        && request.resource.data.email.size() <= 150
+        && request.resource.data.email.lower() == request.auth.token.email
+        && request.resource.data.license.size() <= 50;
+      allow update: if (isAdmin()
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['verified','blocked','blockedUntil','blockReason','deleted']))
+        || (signedIn() && request.auth.uid == uid
+          && request.resource.data.terms == true
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['terms','termsV','termsAt']))
+        || (signedIn() && request.auth.uid == uid
+          && request.resource.data.deleted == true
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['deleted','deletedAt']));
+      allow delete: if false;
+    }
+    match /nurseDocs/{uid} {
+      allow read: if signedIn() && (request.auth.uid == uid || isAdmin());
+      allow create: if signedIn() && request.auth.uid == uid
+        && request.resource.data.keys().hasAll(['idCard','created'])
+        && request.resource.data.keys().hasOnly(['idCard','license','cert','created'])
+        && request.resource.data.idCard.matches('data:image/jpeg;base64,.*') && request.resource.data.idCard.size() <= 300000
+        && (!('license' in request.resource.data) || (request.resource.data.license.matches('data:image/jpeg;base64,.*') && request.resource.data.license.size() <= 300000))
+        && (!('cert' in request.resource.data) || (request.resource.data.cert.matches('data:image/jpeg;base64,.*') && request.resource.data.cert.size() <= 300000));
+      allow update, delete: if false;
+    }
+    match /ratings/{rid} {
+      function rq() { return get(/databases/$(database)/documents/requests/$(request.resource.data.requestId)).data; }
+      allow read: if signedIn() && (isAdmin()
+        || resource.data.fromId == request.auth.uid
+        || resource.data.toId == request.auth.uid);
+      allow create: if canAct()
+        && request.resource.data.fromId == request.auth.uid
+        && request.resource.data.keys().hasOnly(['requestId','fromId','toId','fromRole','stars','comment','created'])
+        && request.resource.data.stars is int
+        && request.resource.data.stars >= 1 && request.resource.data.stars <= 5
+        && request.resource.data.comment is string
+        && request.resource.data.comment.size() <= 500
+        && rq().status == 'done'
+        && ((request.resource.data.fromRole == 'patient'
+              && rq().patientId == request.auth.uid
+              && request.resource.data.toId == rq().get('nurseId', null)
+              && rid == request.resource.data.requestId + '_p')
+            || (request.resource.data.fromRole == 'nurse'
+              && rq().get('nurseId', null) == request.auth.uid
+              && request.resource.data.toId == rq().patientId
+              && rid == request.resource.data.requestId + '_n'));
+      allow update, delete: if false;
+    }
+    match /complaints/{cid} {
+      allow read: if signedIn() && (isAdmin() || resource.data.fromId == request.auth.uid);
+      allow create: if canAct()
+        && request.resource.data.fromId == request.auth.uid
+        && request.resource.data.status == 'open'
+        && request.resource.data.text.size() >= 1 && request.resource.data.text.size() <= 2000
+        && request.resource.data.type.size() <= 20
+        && request.resource.data.requestId.size() <= 40
+        && request.resource.data.fromName.size() <= 100
+        && request.resource.data.keys().hasOnly(['fromId','fromName','fromRole','requestId','type','text','status','created']);
+      allow update: if isAdmin()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status','adminReply','updated']);
+      allow delete: if false;
+    }
+    match /nurseRatings/{rid} {
+      function rq2() { return get(/databases/$(database)/documents/requests/$(request.resource.data.requestId)).data; }
+      allow read: if signedIn();
+      allow create: if canAct()
+        && request.resource.data.keys().hasOnly(['toId','stars','requestId'])
+        && request.resource.data.requestId == rid
+        && request.resource.data.stars is int
+        && request.resource.data.stars >= 1 && request.resource.data.stars <= 5
+        && rq2().status == 'done'
+        && rq2().patientId == request.auth.uid
+        && request.resource.data.toId == rq2().get('nurseId', null);
+      allow update, delete: if false;
+    }
+    match /requests/{id} {
+      allow create: if canAct()
+        && request.auth.token.email_verified == true
+        && request.resource.data.patientId == request.auth.uid
+        && request.resource.data.status == 'open'
+        && request.resource.data.keys().hasOnly(['patientId','service','price','date','slot','area','supplies','supList','hasRx','reopenAfter','status','created','alat','alng','expiresAt','order'])
+        && request.resource.data.service is string && request.resource.data.service.size() <= 12
+        && request.resource.data.price is number
+        && request.resource.data.slot in ['am','pm','ev']
+        && request.resource.data.supplies in ['patient','nurse']
+        && request.resource.data.supList.size() <= 600
+        && request.resource.data.area.size() >= 1 && request.resource.data.area.size() <= 100
+        && request.resource.data.date.size() == 10
+        && request.resource.data.alat is number && request.resource.data.alng is number
+        && request.resource.data.alat >= 21 && request.resource.data.alat <= 32
+        && request.resource.data.alng >= 24 && request.resource.data.alng <= 37
+        && request.resource.data.reopenAfter is number && request.resource.data.created is number
+        && request.resource.data.hasRx is bool
+        && request.resource.data.expiresAt is number
+        && request.resource.data.order in ['','photo','declared']
+        && (!(request.resource.data.service in ['can','iv','abx','ng','cath','sut','ivi']) || request.resource.data.order != '');
+      allow read: if signedIn() && (
+        isAdmin()
+        || resource.data.patientId == request.auth.uid
+        || resource.data.get('nurseId', null) == request.auth.uid
+        || (resource.data.status == 'open' && isVerifiedNurse()));
+      allow update: if canAct() && (
+        (isVerifiedNurse()
+          && request.auth.token.email_verified == true
+          && !(request.auth.uid in resource.data.get('noShow', []))
+          && !(request.auth.uid in resource.data.get('declined', []))
+          && resource.data.status == 'open'
+          && request.time.toMillis() < resource.data.get('expiresAt', 9999999999999)
+          && request.resource.data.status == 'offered'
+          && request.resource.data.nurseId == request.auth.uid
+          && request.resource.data.offerName.size() <= 40
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status','nurseId','acceptedAt','acceptLat','acceptLng','offerName']))
+        || (resource.data.get('nurseId', null) == request.auth.uid
+          && resource.data.status == 'accepted'
+          && request.resource.data.nurseDone == true
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['nurseDone','status'])
+          && (request.resource.data.status == 'accepted'
+              || (request.resource.data.status == 'done' && resource.data.get('patientDone', false) == true)))
+        || (resource.data.patientId == request.auth.uid
+          && resource.data.status == 'accepted'
+          && request.resource.data.patientDone == true
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['patientDone','status'])
+          && (request.resource.data.status == 'accepted'
+              || (request.resource.data.status == 'done' && resource.data.get('nurseDone', false) == true)))
+        || (isAdmin() && resource.data.status == 'accepted'
+          && resource.data.get('nurseDone', false) == true
+          && request.resource.data.status == 'done'
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status','patientDone']))
+        || (resource.data.patientId == request.auth.uid
+          && resource.data.status in ['open','offered','expired','accepted']
+          && resource.data.get('nurseDone', false) == false
+          && request.resource.data.status == 'cancelled'
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status']))
+        || (resource.data.patientId == request.auth.uid
+          && resource.data.status == 'accepted'
+          && resource.data.get('nurseDone', false) == false
+          && request.resource.data.get('patientDone', false) == false
+          && request.resource.data.get('reopenAfter', 9999999999999) < request.time.toMillis()
+          && request.resource.data.status == 'open'
+          && !('nurseId' in request.resource.data)
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status','nurseId','noShow','reopened']))
+        || (isAdmin() && resource.data.status in ['open','offered','expired','accepted']
+          && request.resource.data.status == 'cancelled'
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status']))
+        || (isAdmin() && resource.data.status == 'accepted'
+          && request.resource.data.status == 'open'
+          && !('nurseId' in request.resource.data)
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status','nurseId','noShow','reopened']))
+        || (resource.data.patientId == request.auth.uid
+          && resource.data.status == 'offered'
+          && request.resource.data.status == 'accepted'
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status']))
+        || (resource.data.status == 'offered'
+          && (resource.data.patientId == request.auth.uid || resource.data.get('nurseId', null) == request.auth.uid)
+          && request.resource.data.status == 'open'
+          && !('nurseId' in request.resource.data)
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status','nurseId','offerName','declined']))
+        || (resource.data.patientId == request.auth.uid
+          && resource.data.status == 'open'
+          && request.resource.data.status == 'expired'
+          && request.time.toMillis() > resource.data.get('expiresAt', 9999999999999)
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status']))
+        || (resource.data.patientId == request.auth.uid
+          && resource.data.status in ['open','expired']
+          && request.resource.data.status == 'open'
+          && request.resource.data.slot in ['am','pm','ev']
+          && request.resource.data.date.size() == 10
+          && request.resource.data.expiresAt is number
+          && request.resource.data.expiresAt > request.time.toMillis()
+          && request.resource.data.reopenAfter is number
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status','date','slot','expiresAt','reopenAfter']))
+        || (isAdmin() && resource.data.status == 'done'
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['feePaid']))
+      );
+      allow delete: if false;
+
+      match /contact/{cid} {
+        function par() { return get(/databases/$(database)/documents/requests/$(id)).data; }
+        function parAfter() { return getAfter(/databases/$(database)/documents/requests/$(id)).data; }
+        allow read: if signedIn() && (isAdmin()
+          || (par().patientId == request.auth.uid && (cid == 'p' || par().status in ['accepted','done']))
+          || (par().get('nurseId', null) == request.auth.uid && par().status in ['accepted','done']));
+        allow create: if signedIn() && cid == 'p'
+          && parAfter().patientId == request.auth.uid
+          && request.resource.data.keys().hasOnly(['patientName','patientPhone','address','note','rx','ord','lat','lng','acc'])
+          && request.resource.data.keys().hasAll(['patientName','patientPhone','address','lat','lng'])
+          && request.resource.data.patientName.size() <= 100
+          && request.resource.data.patientPhone.size() <= 20
+          && request.resource.data.address.size() <= 300
+          && request.resource.data.get('note', '').size() <= 1000
+          && (request.resource.data.get('rx', '') == '' || (request.resource.data.rx.matches('data:image/jpeg;base64,.*') && request.resource.data.rx.size() <= 300000))
+          && (request.resource.data.get('ord', '') == '' || (request.resource.data.ord.matches('data:image/jpeg;base64,.*') && request.resource.data.ord.size() <= 300000))
+          && request.resource.data.lat is number && request.resource.data.lng is number;
+        allow create, update: if signedIn() && cid == 'n'
+          && parAfter().get('nurseId', null) == request.auth.uid
+          && parAfter().status in ['offered','accepted']
+          && request.resource.data.nurseId == request.auth.uid
+          && request.resource.data.keys().hasOnly(['nurseId','nurseName','nursePhone'])
+          && request.resource.data.nurseName.size() <= 100
+          && request.resource.data.nursePhone.size() <= 20;
+        allow delete: if false;
+      }
+
+      match /track/{tid} {
+        function par() { return get(/databases/$(database)/documents/requests/$(id)).data; }
+        function parAfter() { return getAfter(/databases/$(database)/documents/requests/$(id)).data; }
+        allow read: if signedIn() && (isAdmin()
+          || par().patientId == request.auth.uid
+          || par().get('nurseId', null) == request.auth.uid);
+        allow create, update: if canAct() && tid == 'n'
+          && parAfter().get('nurseId', null) == request.auth.uid
+          && parAfter().status == 'accepted'
+          && request.resource.data.nurseId == request.auth.uid
+          && request.resource.data.keys().hasOnly(['nurseId','lat','lng','acc','ts','active'])
+          && request.resource.data.lat is number && request.resource.data.lng is number && request.resource.data.ts is number;
+        allow delete: if false;
+      }
+    }
+  }
+}
